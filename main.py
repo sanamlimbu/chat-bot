@@ -1,24 +1,98 @@
 import os
 from datetime import datetime
 
-from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, UploadFile
+import requests
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import SupabaseVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from mangum import Mangum
 from pydantic import BaseModel
+from langchain import hub
+from langchain_core.documents import Document
+from langgraph.graph import START, StateGraph
+from typing_extensions import List, TypedDict
 
-from graph import State, graph
-from openai_config import openai_embeddings
-from supabase_config import supabase
+
+from langchain_community.vectorstores import SupabaseVectorStore
+from supabase import create_client
+
+
+from dotenv import load_dotenv
+from pydantic_settings import BaseSettings
 
 load_dotenv()
+
+class Config(BaseSettings):
+    openai_api_key: str
+    langchain_api_key: str
+    langchain_project: str
+    langchain_tracing: bool
+    supabase_url: str
+    supabase_service_key: str
+    telegram_bot_token: str
+
+
+config = Config()
 
 ALLOWED_FILE_TYPE = "application/pdf"
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 UPLOAD_DIR = "uploads"
+TELEGRAM_URL = f"https://api.telegram.org/bot{config.telegram_bot_token}/sendMessage"
 
-app = FastAPI()
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+supabase = create_client(config.supabase_url, config.supabase_service_key)
+
+
+openai_llm = ChatOpenAI(
+    model_name="gpt-4o",
+    api_key=config.openai_api_key,
+    temperature=0.7,
+    max_retries=2,
+)
+
+openai_embeddings = OpenAIEmbeddings(
+    api_key=config.openai_api_key, model="text-embedding-3-small"
+)
+
+vector_store = SupabaseVectorStore(
+    embedding=openai_embeddings,
+    client=supabase,
+    table_name="documents",
+    query_name="match_documents",
+)
+
+prompt = hub.pull("rlm/rag-prompt")
+
+
+class State(TypedDict):
+    question: str
+    context: List[Document]
+    answer: str
+
+
+def retrieve(state: State):
+    retrieved_docs = vector_store.similarity_search(state["question"])
+    return {"context": retrieved_docs}
+
+
+def generate(state: State):
+    docs_content = "\n\n".join(doc.page_content for doc in state["context"])
+    messages = prompt.invoke({"question": state["question"], "context": docs_content})
+    response = openai_llm.invoke(messages)
+    return {"answer": response.content}
+
+
+graph_builder = StateGraph(State).add_sequence([retrieve, generate])
+graph_builder.add_edge(START, "retrieve")
+graph = graph_builder.compile()
+
+
+app = FastAPI(title="Telegram RAG Chat Bot", version="1.0.0")
+
+
 
 
 @app.get("/hello")
@@ -35,9 +109,6 @@ class ChatInput(BaseModel):
 
 @app.post("/chat")
 def chat(input: ChatInput):
-    if not input.question:
-        raise HTTPException(status_code=400, detail="No user input.")
-
     initial_state = State(question=input.question, context=[], answer="")
     result = graph.invoke(initial_state)
 
@@ -87,6 +158,32 @@ async def upload_pdf(
     finally:
         if os.path.exists(file_path):
             os.remove(file_path)
+
+
+@app.post("/telegram-webhook")
+async def telegram_webhook(request: Request):
+    payload = await request.json()
+
+    message = payload.get("message", {})
+    chat_id = message.get("chat", {}).get("id")
+    text = message.get("text")
+
+    if not chat_id or not text:
+        return {"status": "ignored"}
+
+    try:
+        state = State(question=text, context=[], answer="")
+        result = graph.invoke(state)
+        answer = result["answer"]
+    except Exception as e:
+        answer = "Sorry, an error occurred while processing your request."
+
+    requests.post(TELEGRAM_URL, json={"chat_id": chat_id, "text": answer})
+
+    return {"status": "ok"}
+
+
+handler = Mangum(app, lifespan="off")
 
 
 if __name__ == "__main__":

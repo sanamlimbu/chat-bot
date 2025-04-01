@@ -1,0 +1,68 @@
+# ========================
+# Git / VCS
+# ========================
+.git
+.gitignore
+.gitattributes
+
+# ========================
+# Docker
+# ========================
+Dockerfile
+docker-compose.yml
+.dockerignore
+.docker/
+
+# ========================
+# Python: Bytecode, cache
+# ========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# ========================
+# Logs
+# ========================
+*.log
+crash.log
+crash.*.log
+
+# ========================
+# Virtual environments
+# ========================
+.env
+.venv/
+venv/
+env/
+
+# ========================
+# IDEs
+# ========================
+.idea/
+.vscode/
+
+# ========================
+# Miscellaneous files
+# ========================
+*.pdf
+*.docx
+*.zip
+upload/
+
+# ========================
+# Terraform
+# ========================
+.terraform/
+terraform.rc
+.terraformrc
+tf_generated/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+.terraform.tfstate.lock.info
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

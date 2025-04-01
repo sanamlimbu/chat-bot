@@ -1,6 +1,34 @@
+# ======================================
+# Python
+# ======================================
 .env
-.venv
-__pycache__
-uploads
+.venv/
+__pycache__/
+*.py[cod]
+
+# ======================================
+# Miscellaneous files
+# ======================================
+uploads/
 *.pdf
 *.docx
+*.zip
+
+# ======================================
+# Terraform
+# ======================================
+.terraform/
+tf_generated/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.tfstate.lock.info
+.terraformrc
+terraform.rc
