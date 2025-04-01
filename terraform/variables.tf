@@ -53,4 +53,5 @@ variable "repo_name" {
 variable "image_tag" {
   description = "Docker image tag"
   type        = string
+  default     = "chat-bot:latest"
 }

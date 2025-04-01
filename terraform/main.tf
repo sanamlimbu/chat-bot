@@ -35,6 +35,7 @@ resource "aws_lambda_function" "function" {
   function_name = local.service_name
   description   = "Chat bot API."
   role          = aws_iam_role.lambda_exec.arn
+  package_type  = "Image"
   image_uri     = "${data.aws_ecr_repository.repo.repository_url}:${var.image_tag}"
 
   memory_size   = 2048
@@ -83,7 +84,7 @@ resource "aws_iam_role_policy_attachment" "lambda_policy" {
 }
 
 resource "aws_apigatewayv2_api" "lambda" {
-  name          = "Chat Bot API Gateway"
+  name          = "chat-bot-gateway"
   protocol_type = "HTTP"
 }
 
