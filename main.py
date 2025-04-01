@@ -2,27 +2,23 @@ import os
 from datetime import datetime
 
 import requests
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from langchain import hub
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import SupabaseVectorStore
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langgraph.graph import START, StateGraph
 from mangum import Mangum
 from pydantic import BaseModel
-from langchain import hub
-from langchain_core.documents import Document
-from langgraph.graph import START, StateGraph
+from pydantic_settings import BaseSettings
+from supabase import create_client
 from typing_extensions import List, TypedDict
 
-
-from langchain_community.vectorstores import SupabaseVectorStore
-from supabase import create_client
-
-
-from dotenv import load_dotenv
-from pydantic_settings import BaseSettings
-
 load_dotenv()
+
 
 class Config(BaseSettings):
     openai_api_key: str
@@ -38,10 +34,8 @@ config = Config()
 
 ALLOWED_FILE_TYPE = "application/pdf"
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-UPLOAD_DIR = "uploads"
+UPLOAD_DIR = "/tmp/uploads"
 TELEGRAM_URL = f"https://api.telegram.org/bot{config.telegram_bot_token}/sendMessage"
-
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 supabase = create_client(config.supabase_url, config.supabase_service_key)
 
@@ -93,8 +87,6 @@ graph = graph_builder.compile()
 app = FastAPI(title="Telegram RAG Chat Bot", version="1.0.0")
 
 
-
-
 @app.get("/hello")
 def hello():
     return {
@@ -119,6 +111,8 @@ def chat(input: ChatInput):
 async def upload_pdf(
     file: UploadFile = File(...),
 ):
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+
     if file.content_type != ALLOWED_FILE_TYPE:
         raise HTTPException(
             status_code=400,

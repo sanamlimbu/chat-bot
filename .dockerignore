@@ -48,7 +48,7 @@ env/
 *.pdf
 *.docx
 *.zip
-upload/
+tmp/*
 
 # ========================
 # Terraform
