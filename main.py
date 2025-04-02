@@ -84,15 +84,7 @@ graph_builder.add_edge(START, "retrieve")
 graph = graph_builder.compile()
 
 
-app = FastAPI(title="Telegram RAG Chat Bot", version="1.0.0")
-
-
-@app.middleware("http")
-async def debug_request_log(request: Request, call_next):
-    print(f"REQUEST: {request.method} {request.url}")
-    response = await call_next(request)
-    print(f"RESPONSE: {response.status_code}")
-    return response
+app = FastAPI(title="Telegram RAG Chat Bot", version="1.0.0", root_path="/api")
 
 
 @app.get("/health")

@@ -88,10 +88,10 @@ resource "aws_apigatewayv2_api" "lambda" {
   protocol_type = "HTTP"
 }
 
-resource "aws_apigatewayv2_stage" "prod" {
+resource "aws_apigatewayv2_stage" "api" {
   api_id = aws_apigatewayv2_api.lambda.id
 
-  name        = "prod"
+  name        = "api"
   auto_deploy = true
   default_route_settings {
     throttling_burst_limit = 25
@@ -149,5 +149,5 @@ resource "aws_lambda_permission" "api_gw" {
 }
 
 output "lambda_invoke_url" {
-  value = "${aws_apigatewayv2_api.lambda.api_endpoint}/${aws_apigatewayv2_stage.prod.name}/"
+  value = "${aws_apigatewayv2_api.lambda.api_endpoint}/${aws_apigatewayv2_stage.api.name}/"
 }
