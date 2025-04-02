@@ -87,8 +87,8 @@ graph = graph_builder.compile()
 app = FastAPI(title="Telegram RAG Chat Bot", version="1.0.0")
 
 
-@app.get("/hello")
-def hello():
+@app.get("/health")
+def health():
     return {
         "message": "Hello World",
         "time": datetime.now().strftime("%Y-%m-%d %I:%M:%S %p"),
